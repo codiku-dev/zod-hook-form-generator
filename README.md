@@ -1,19 +1,16 @@
 # React Native Form Components
 
-Une bibliothèque de composants de formulaire React Native avec validation Zod et support multilingue.
+A React Native form components library with Zod validation and multilingual support.
 
-<img width="456" height="977" alt="image" src="https://github.com/user-attachments/assets/ce2de871-279d-42e2-aa7b-d62c47ce7b04" />
+## Features
 
-
-## Fonctionnalités
-
-- ✅ Validation automatique avec Zod
-- ✅ Support multilingue (EN/FR)
-- ✅ Composants de formulaire réutilisables
-- ✅ Messages d'erreur traduits
-- ✅ Changement de langue en temps réel
-- ✅ Champs conditionnels
-- ✅ Types TypeScript complets
+- ✅ Automatic validation with Zod
+- ✅ Multilingual support (EN/FR)
+- ✅ Reusable form components
+- ✅ Translated error messages
+- ✅ Real-time language switching
+- ✅ Conditional fields
+- ✅ Complete TypeScript types
 
 ## Installation
 
@@ -21,9 +18,9 @@ Une bibliothèque de composants de formulaire React Native avec validation Zod e
 bun install
 ```
 
-## Utilisation
+## Usage
 
-### Formulaire de base
+### Basic Form
 
 ```tsx
 import React from 'react';
@@ -31,7 +28,7 @@ import { ZodForm } from './components/forms';
 import { z } from 'zod';
 import { IntlProvider, useIntl } from './components/IntlProvider';
 
-// Créer un schéma Zod avec messages traduits
+// Create Zod schema with translated messages
 const createFormSchema = (t: (descriptor: { id: string; defaultMessage?: string }) => string) => 
   z.object({
     name: z.string().min(2, t({ id: 'error.name.min' })),
@@ -60,7 +57,7 @@ function MyForm() {
   );
 }
 
-// Wrapper avec IntlProvider
+// Wrapper with IntlProvider
 export default function App() {
   return (
     <IntlProvider defaultLocale="en">
@@ -70,7 +67,7 @@ export default function App() {
 }
 ```
 
-### Champs conditionnels
+### Conditional Fields
 
 ```tsx
 const schema = z.object({
@@ -81,7 +78,7 @@ const schema = z.object({
 });
 ```
 
-### Validation personnalisée
+### Custom Validation
 
 ```tsx
 const schema = z.object({
@@ -93,50 +90,50 @@ const schema = z.object({
 });
 ```
 
-## Composants disponibles
+## Available Components
 
 ### TextInput
-Champ de saisie de texte avec validation.
+Text input field with validation.
 
 ```tsx
 <TextInput
   control={control}
   name="email"
   label="Email"
-  placeholder="Entrez votre email"
+  placeholder="Enter your email"
   secureTextEntry={false}
   showError={true}
 />
 ```
 
 ### Select
-Menu déroulant pour sélectionner une option.
+Dropdown menu for option selection.
 
 ```tsx
 <Select
   control={control}
   name="country"
-  label="Pays"
-  placeholder="Sélectionnez un pays"
+  label="Country"
+  placeholder="Select a country"
   options={[
     { label: 'France', value: 'fr' },
-    { label: 'États-Unis', value: 'us' },
+    { label: 'United States', value: 'us' },
   ]}
   showError={true}
 />
 ```
 
 ### Radio
-Boutons radio pour sélection unique.
+Radio buttons for single selection.
 
 ```tsx
 <Radio
   control={control}
   name="gender"
-  label="Genre"
+  label="Gender"
   options={[
-    { label: 'Homme', value: 'male' },
-    { label: 'Femme', value: 'female' },
+    { label: 'Male', value: 'male' },
+    { label: 'Female', value: 'female' },
   ]}
   direction="column"
   showError={true}
@@ -144,23 +141,23 @@ Boutons radio pour sélection unique.
 ```
 
 ### Switch
-Interrupteur pour valeurs booléennes.
+Toggle switch for boolean values.
 
 ```tsx
 <Switch
   control={control}
   name="notifications"
   label="Notifications"
-  description="Recevoir les notifications par email"
+  description="Receive email notifications"
   showError={true}
 />
 ```
 
-## Ajouter un nouveau composant
+## Adding a New Component
 
-### 1. Créer le composant
+### 1. Create the Component
 
-Créez un nouveau fichier dans `components/forms/` :
+Create a new file in `components/forms/` :
 
 ```tsx
 // components/forms/MyComponent.tsx
@@ -192,7 +189,7 @@ export function MyComponent<T extends FieldValues>({
         name={name}
         render={({ field, fieldState }) => (
           <View>
-            {/* Votre composant personnalisé ici */}
+            {/* Your custom component here */}
             <TextInput
               value={field.value}
               onChangeText={field.onChange}
@@ -213,27 +210,27 @@ export function MyComponent<T extends FieldValues>({
 }
 
 const styles = StyleSheet.create({
-  // Styles pour votre composant
+  // Styles for your component
 });
 ```
 
-### 2. Exporter le composant
+### 2. Export the Component
 
-Ajoutez l'export dans `components/forms/index.ts` :
+Add the export in `components/forms/index.ts` :
 
 ```tsx
 export { MyComponent } from './MyComponent';
 ```
 
-### 3. Ajouter le support dans ZodForm
+### 3. Add Support in ZodForm
 
-Modifiez `components/forms/ZodForm.tsx` pour supporter votre nouveau type :
+Modify `components/forms/ZodForm.tsx` to support your new type :
 
 ```tsx
-// Dans l'interface FieldConfig
+// In FieldConfig interface
 type: 'string' | 'number' | 'boolean' | 'enum' | 'myCustomType';
 
-// Dans la fonction renderField
+// In renderField function
 case 'myCustomType':
   return (
     <MyComponent
@@ -246,14 +243,14 @@ case 'myCustomType':
   );
 ```
 
-### 4. Ajouter les traductions
+### 4. Add Translations
 
-Ajoutez les clés de traduction dans `i18n/en.ts` et `i18n/fr.ts` :
+Add translation keys in `i18n/en.ts` and `i18n/fr.ts` :
 
 ```tsx
 // i18n/en.ts
 export const en = {
-  // ... autres traductions
+  // ... other translations
   'field.myCustomField': 'My Custom Field',
   'form.myCustomField.placeholder': 'Enter custom value',
   'error.myCustomField.required': 'This field is required',
@@ -261,29 +258,29 @@ export const en = {
 
 // i18n/fr.ts
 export const fr = {
-  // ... autres traductions
+  // ... other translations
   'field.myCustomField': 'Mon champ personnalisé',
   'form.myCustomField.placeholder': 'Entrez une valeur personnalisée',
   'error.myCustomField.required': 'Ce champ est requis',
 };
 ```
 
-## Structure des fichiers
+## File Structure
 
 ```
 components/
 ├── forms/
-│   ├── index.ts          # Exports des composants
-│   ├── ZodForm.tsx       # Composant principal
-│   ├── TextInput.tsx     # Champ de saisie
-│   ├── Select.tsx        # Menu déroulant
-│   ├── Radio.tsx         # Boutons radio
-│   ├── Switch.tsx        # Interrupteur
-│   └── validators.ts     # Validateurs personnalisés
-├── IntlProvider.tsx      # Provider multilingue
+│   ├── index.ts          # Component exports
+│   ├── ZodForm.tsx       # Main component
+│   ├── TextInput.tsx     # Text input field
+│   ├── Select.tsx        # Dropdown menu
+│   ├── Radio.tsx         # Radio buttons
+│   ├── Switch.tsx        # Toggle switch
+│   └── validators.ts     # Custom validators
+├── IntlProvider.tsx      # Multilingual provider
 i18n/
-├── en.ts                 # Traductions anglaises
-└── fr.ts                 # Traductions françaises
+├── en.ts                 # English translations
+└── fr.ts                 # French translations
 ```
 
 ## API Reference
@@ -292,17 +289,17 @@ i18n/
 
 | Prop | Type | Description |
 |------|------|-------------|
-| `schema` | `ZodSchema` | Schéma Zod pour la validation |
-| `onSubmit` | `(data) => void` | Callback appelé à la soumission |
-| `formOptions` | `UseFormProps` | Options du formulaire React Hook Form |
-| `showSubmitButton` | `boolean` | Afficher le bouton de soumission |
-| `submitButtonText` | `string` | Texte du bouton de soumission |
-| `showFieldErrors` | `boolean` | Afficher les erreurs des champs |
-| `onForm` | `(form) => void` | Callback avec l'instance du formulaire |
+| `schema` | `ZodSchema` | Zod schema for validation |
+| `onSubmit` | `(data) => void` | Callback called on submission |
+| `formOptions` | `UseFormProps` | React Hook Form options |
+| `showSubmitButton` | `boolean` | Show submit button |
+| `submitButtonText` | `string` | Submit button text |
+| `showFieldErrors` | `boolean` | Show field errors |
+| `onForm` | `(form) => void` | Callback with form instance |
 
-### Champs conditionnels
+### Conditional Fields
 
-Utilisez `meta({ showConditions: [...] })` pour rendre des champs conditionnels :
+Use `meta({ showConditions: [...] })` to make fields conditional :
 
 ```tsx
 z.string().meta({
@@ -313,24 +310,24 @@ z.string().meta({
 })
 ```
 
-**Opérateurs disponibles :**
-- `equals` : égalité stricte
-- `notEquals` : différence
-- `contains` : contient (pour les strings)
-- `notContains` : ne contient pas
-- `true` : valeur vraie
-- `false` : valeur fausse
+**Available operators:**
+- `equals` : strict equality
+- `notEquals` : difference
+- `contains` : contains (for strings)
+- `notContains` : does not contain
+- `true` : true value
+- `false` : false value
 
-## Développement
+## Development
 
 ```bash
-# Installer les dépendances
+# Install dependencies
 bun install
 
-# Démarrer le serveur de développement
+# Start development server
 bun start
 ```
 
-## Licence
+## License
 
 MIT
