@@ -1,5 +1,5 @@
 export const en = {
-    'app.title': 'React Native Sandbox',
+    'app.title': 'Zod hook form generator',
     'app.subtitle': 'Automatic Form Generation with Conditional Fields via Meta',
 
     // Form
@@ -21,6 +21,24 @@ export const en = {
     'field.phoneNumber': 'Phone Number',
     'field.address': 'Address',
     'field.terms': 'Terms and Conditions',
+
+    // Field descriptions
+    'field.notifications.description': 'Receive notifications by email',
+    'field.newsletter.description': 'Subscribe to our newsletter',
+    'field.terms.description': 'I accept the terms and conditions',
+
+    // Field placeholders
+    'field.name.placeholder': 'Enter your full name',
+    'field.email.placeholder': 'Enter your email address',
+    'field.password.placeholder': 'Enter your password',
+    'field.repeatPassword.placeholder': 'Confirm your password',
+    'field.phoneNumber.placeholder': 'Enter your phone number',
+    'field.address.placeholder': 'Enter your address',
+
+    // Field help text
+    'field.password.help': 'Password must be at least 6 characters',
+    'field.phoneNumber.help': 'Required for US residents only',
+    'field.address.help': 'Required for non-US residents',
 
     // Country options
     'country.us': 'United States',
