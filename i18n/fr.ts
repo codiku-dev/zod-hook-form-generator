@@ -23,6 +23,24 @@ export const fr = {
     'field.address': 'Adresse',
     'field.terms': 'Conditions générales',
 
+    // Field descriptions
+    'field.notifications.description': 'Recevoir les notifications par email',
+    'field.newsletter.description': 'S\'abonner à notre newsletter',
+    'field.terms.description': 'J\'accepte les conditions générales',
+
+    // Field placeholders
+    'field.name.placeholder': 'Entrez votre nom complet',
+    'field.email.placeholder': 'Entrez votre adresse email',
+    'field.password.placeholder': 'Entrez votre mot de passe',
+    'field.repeatPassword.placeholder': 'Confirmez votre mot de passe',
+    'field.phoneNumber.placeholder': 'Entrez votre numéro de téléphone',
+    'field.address.placeholder': 'Entrez votre adresse',
+
+    // Field help text
+    'field.password.help': 'Le mot de passe doit contenir au moins 6 caractères',
+    'field.phoneNumber.help': 'Requis uniquement pour les résidents américains',
+    'field.address.help': 'Requis pour les non-résidents américains',
+
     // Country options
     'country.us': 'États-Unis',
     'country.ca': 'Canada',
