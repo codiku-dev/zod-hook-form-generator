@@ -1,4 +1,4 @@
-# React Native Form Components
+# Zod hook form generator + intl support
 
 A React Native form components library with Zod validation and multilingual support.
 <img width="483" height="1051" alt="image" src="https://github.com/user-attachments/assets/288d1d51-e81c-42a5-897e-8fd868fdec72" />
