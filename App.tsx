@@ -19,7 +19,7 @@ const createFormSchema = (t: (descriptor: { id: string; defaultMessage?: string 
   password: z.string().min(6, t({ id: 'error.password.min' })),
   repeatPassword: z.string().min(6, t({ id: 'error.password.min' })),
   newsletter: z.boolean().meta({
-    showConditions: [{ field: 'notifications', operator: 'true' }]
+    showConditions: [{ field: 'notifications', operator: 'equals', value: true }]
   }).optional(),
   phoneNumber: z.string().meta({
     showConditions: [{ field: 'country', operator: 'equals', value: 'us' }]
