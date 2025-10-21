@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo } from 'react';
 import { View, StyleSheet, TouchableOpacity, Text } from 'react-native';
 import { useForm, Control, FieldValues, Path, UseFormProps, UseFormReturn } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -9,35 +9,38 @@ import { Radio } from './Radio';
 import { Switch } from './Switch';
 import { useIntl } from '../IntlProvider';
 
+// ============================================================================
+// INTERFACES & TYPES
+// ============================================================================
+
+/**
+ * Props for the ZodForm component
+ * Generic type T extends ZodType to ensure type safety with Zod schemas
+ */
 interface ZodFormProps<T extends z.ZodType<any, any, any> = z.ZodType<any, any, any>> {
-    schema: T;
-    onSubmit: (data: z.infer<T>) => void;
-    formOptions?: Omit<UseFormProps<z.infer<T>>, 'resolver'>;
-    className?: string;
-    showSubmitButton?: boolean;
-    submitButtonText?: string;
-    showFieldErrors?: boolean;
-    onForm?: (form: UseFormReturn<z.core.output<T>, any, z.core.output<T>>) => void;
+    schema: T; // Zod schema for validation
+    onSubmit: (data: z.infer<T>) => void; // Callback when form is submitted
+    formOptions?: Omit<UseFormProps<z.infer<T>>, 'resolver'>; // React Hook Form options
+    className?: string; // CSS class name (not used in React Native)
+    showSubmitButton?: boolean; // Whether to show submit button
+    submitButtonText?: string; // Text for submit button
+    showFieldErrors?: boolean; // Whether to show field errors
+    onForm?: (form: UseFormReturn<z.core.output<T>, any, z.core.output<T>>) => void; // Form instance callback
 }
 
-interface FieldConfig {
-    name: string;
-    type: 'string' | 'number' | 'boolean' | 'enum';
-    label?: string;
-    placeholder?: string;
-    description?: string;
-    options?: Array<{ label: string; value: string | number }>;
-    isRequired: boolean;
-    isVisible: boolean;
-    isPassword?: boolean;
-    showConditions?: Array<{
-        field: string;
-        operator: 'equals' | 'notEquals' | 'contains' | 'notContains' | 'true' | 'false';
-        value?: any;
-    }>;
-    dependsOn?: string[]; // Champs dont dépend la visibilité
-}
 
+// ============================================================================
+// MAIN COMPONENT
+// ============================================================================
+
+/**
+ * ZodForm - Main form component that automatically generates form fields from Zod schema
+ * Features:
+ * - Automatic field generation based on Zod schema
+ * - Multilingual support with real-time language switching
+ * - Conditional field visibility
+ * - Type-safe form handling
+ */
 export function ZodForm<T extends z.ZodType<any, any, any> = z.ZodType<any, any, any>>({
     schema,
     onSubmit,
@@ -47,156 +50,89 @@ export function ZodForm<T extends z.ZodType<any, any, any> = z.ZodType<any, any,
     showFieldErrors = true,
     onForm,
 }: ZodFormProps<T>) {
+    // ============================================================================
+    // HOOKS & STATE
+    // ============================================================================
+
     const { formatMessage, locale } = useIntl();
     const t = formatMessage;
+
+    // Initialize React Hook Form with Zod resolver
     const form = useForm<z.infer<T>>({
         resolver: zodResolver(schema) as any,
         ...formOptions,
     });
 
-    // Exposer le form via le callback
-    React.useEffect(() => {
+    // Expose form instance to parent component via callback
+    useEffect(() => {
         onForm?.(form);
     }, [form, onForm]);
 
-    // Forcer la revalidation du formulaire quand la langue change
-    React.useEffect(() => {
-        // Revalider tous les champs pour mettre à jour les messages d'erreur
-        form.trigger();
+    // Force form revalidation when language changes to update error messages
+    useEffect(() => {
+        form.trigger(); // Revalidate all fields to update error messages
     }, [locale, form]);
 
+    // Watch all form values for conditional field logic
     const watchedValues = form.watch();
 
 
-    const fieldConfigs = useMemo(() => {
-        const configs: FieldConfig[] = [];
+    // ============================================================================
+    // FIELD SCHEMA PROCESSING
+    // ============================================================================
 
-        if (schema instanceof z.ZodObject) {
-            const shape = schema.shape;
+    /**
+     * Get field schemas from Zod schema
+     * Simple extraction without complex configuration objects
+     */
+    const fieldSchemas = useMemo(() => {
+        if (!(schema instanceof z.ZodObject)) return [];
 
-            Object.entries(shape).forEach(([fieldName, fieldSchema]) => {
-                const config: FieldConfig = {
-                    name: fieldName,
-                    type: 'string',
-                    isRequired: false,
-                    isVisible: true,
-                };
+        return Object.entries(schema.shape).map(([fieldName, fieldSchema]) => ({
+            name: fieldName,
+            schema: fieldSchema,
+        }));
+    }, [schema]);
 
-                // Déterminer le type et les propriétés du champ
-                if (fieldSchema instanceof z.ZodString) {
-                    config.type = 'string';
-                    config.isRequired = !fieldSchema.isOptional();
+    // ============================================================================
+    // CONDITIONAL FIELD VISIBILITY LOGIC
+    // ============================================================================
 
-                    // Vérifier si c'est un email
-                    if (fieldSchema._def.checks?.some((check: any) => check.kind === 'email')) {
-                        config.placeholder = t({ id: 'form.email.placeholder' });
-                    } else if (fieldName.toLowerCase().includes('password')) {
-                        config.placeholder = t({ id: 'form.password.placeholder' });
-                        config.isPassword = true;
-                    } else {
-                        config.placeholder = t({ id: 'form.field.placeholder' }, { fieldName });
-                    }
-                } else if (fieldSchema instanceof z.ZodNumber) {
-                    config.type = 'number';
-                    config.isRequired = !fieldSchema.isOptional();
-                    config.placeholder = t({ id: 'form.field.placeholder' }, { fieldName });
-                } else if (fieldSchema instanceof z.ZodBoolean) {
-                    config.type = 'boolean';
-                    config.isRequired = false;
-                } else if (fieldSchema instanceof z.ZodEnum) {
-                    config.type = 'enum';
-                    config.isRequired = !fieldSchema.isOptional();
-                    config.options = fieldSchema.options.map((option: string | number) => {
-                        const optionKey = `${fieldName}.${option}`;
-                        const translatedLabel = t({ id: optionKey, defaultMessage: String(option).charAt(0).toUpperCase() + String(option).slice(1) });
-                        return {
-                            label: translatedLabel,
-                            value: option,
-                        };
-                    });
-                } else if (fieldSchema instanceof z.ZodOptional) {
-                    const innerSchema = fieldSchema._def.innerType;
-                    if (innerSchema instanceof z.ZodString) {
-                        config.type = 'string';
-                        config.isRequired = false;
-                        if (fieldName.toLowerCase().includes('password')) {
-                            config.placeholder = t({ id: 'form.password.placeholder' });
-                            config.isPassword = true;
-                        } else {
-                            config.placeholder = t({ id: 'form.field.placeholder' }, { fieldName });
-                        }
-                    } else if (innerSchema instanceof z.ZodNumber) {
-                        config.type = 'number';
-                        config.isRequired = false;
-                        config.placeholder = t({ id: 'form.field.placeholder' }, { fieldName });
-                    } else if (innerSchema instanceof z.ZodBoolean) {
-                        config.type = 'boolean';
-                        config.isRequired = false;
-                    } else if (innerSchema instanceof z.ZodEnum) {
-                        config.type = 'enum';
-                        config.isRequired = false;
-                        config.options = innerSchema.options.map((option: string | number) => {
-                            const optionKey = `${fieldName}.${option}`;
-                            const translatedLabel = t({ id: optionKey, defaultMessage: String(option).charAt(0).toUpperCase() + String(option).slice(1) });
-                            return {
-                                label: translatedLabel,
-                                value: option,
-                            };
-                        });
-                    }
-                }
+    /**
+     * Extract showConditions from field schema meta data
+     */
+    const getShowConditions = React.useCallback((fieldSchema: z.ZodTypeAny) => {
+        let meta = null;
 
-                // Extraire les showConditions de visibilité depuis meta
-                let meta = null;
-
-                // Le meta est une fonction, pas une propriété directe
-                try {
-                    meta = (fieldSchema as any).meta();
-                } catch (e) {
-                    // Si ça ne marche pas, essayer d'autres méthodes
-                }
-
-                // Si c'est un champ optionnel et qu'on n'a pas trouvé de meta, vérifier le schéma interne
-                if (fieldSchema instanceof z.ZodOptional && !meta) {
-                    const innerSchema = fieldSchema._def.innerType;
-                    try {
-                        meta = (innerSchema as any).meta();
-                    } catch (e) {
-                        // Ignorer l'erreur
-                    }
-                }
-
-
-                // Vérifier si on a des showConditions directement dans le meta
-                if (meta && Array.isArray(meta.showConditions)) {
-                    config.showConditions = meta.showConditions;
-                }
-
-                // Générer le label à partir du nom du champ
-                const fieldKey = `field.${fieldName}`;
-                config.label = t({
-                    id: fieldKey, defaultMessage: fieldName
-                        .split(/(?=[A-Z])/)
-                        .join(' ')
-                        .toLowerCase()
-                        .replace(/^\w/, c => c.toUpperCase())
-                });
-
-                configs.push(config);
-            });
+        try {
+            meta = (fieldSchema as any).meta();
+        } catch (e) {
+            // Meta might not be available
         }
 
-        return configs;
-    }, [schema, t, locale]);
+        // For optional fields, try to get meta from inner schema
+        if (fieldSchema instanceof z.ZodOptional && !meta) {
+            const innerSchema = fieldSchema._def.innerType;
+            try {
+                meta = (innerSchema as any).meta();
+            } catch (e) {
+                // Ignore errors when accessing meta
+            }
+        }
 
-    const isFieldVisible = React.useCallback((config: FieldConfig): boolean => {
-        if (!config.showConditions || config.showConditions.length === 0) {
+        return meta?.showConditions || [];
+    }, []);
+
+    /**
+     * Determine if a field should be visible based on its showConditions
+     */
+    const isFieldVisible = React.useCallback((showConditions: any[]): boolean => {
+        if (!showConditions || showConditions.length === 0) {
             return true;
         }
 
-        const result = config.showConditions.every(condition => {
+        return showConditions.every(condition => {
             const fieldValue = watchedValues[condition.field as keyof typeof watchedValues];
-
 
             switch (condition.operator) {
                 case 'equals':
@@ -215,68 +151,189 @@ export function ZodForm<T extends z.ZodType<any, any, any> = z.ZodType<any, any,
                     return true;
             }
         });
-
-        return result;
     }, [watchedValues]);
 
-    const renderField = (config: FieldConfig) => {
-        if (!isFieldVisible(config)) {
+    // ============================================================================
+    // FIELD RENDERING LOGIC
+    // ============================================================================
+
+    /**
+     * Render a single form field based on its schema
+     * Pass props directly to components instead of complex configuration
+     */
+    const renderField = ({ name, schema }: { name: string; schema: z.ZodTypeAny }) => {
+        const control = form.control as any;
+        const fieldName = name as Path<z.infer<T>>;
+        const error = form.formState.errors[name];
+
+        // Get show conditions and check visibility
+        const showConditions = getShowConditions(schema);
+        if (!isFieldVisible(showConditions)) {
             return null;
         }
 
-        const control = form.control as any;
-        const fieldName = config.name as Path<z.infer<T>>;
-        const error = form.formState.errors[config.name];
+        // Generate label and description from i18n
+        const label = t({
+            id: `field.${name}`,
+            defaultMessage: name
+                .split(/(?=[A-Z])/)
+                .join(' ')
+                .toLowerCase()
+                .replace(/^\w/, c => c.toUpperCase())
+        });
+
+        const description = t({
+            id: `field.${name}.description`,
+            defaultMessage: undefined // Only use if translation exists
+        });
+
+        const placeholder = t({
+            id: `field.${name}.placeholder`,
+            defaultMessage: undefined // Only use if translation exists
+        });
 
         return (
-            <View key={config.name} style={styles.fieldContainer}>
+            <View key={name} style={styles.fieldContainer}>
+                {/* Render appropriate component based on schema type */}
                 {(() => {
-                    switch (config.type) {
-                        case 'string':
+                    // Handle ZodString fields
+                    if (schema instanceof z.ZodString) {
+                        const isPassword = name.toLowerCase().includes('password');
+
+                        return (
+                            <TextInput
+                                control={control}
+                                name={fieldName}
+                                label={label}
+                                placeholder={placeholder}
+                                secureTextEntry={isPassword}
+                                showError={false}
+                            />
+                        );
+                    }
+
+                    // Handle ZodNumber fields
+                    else if (schema instanceof z.ZodNumber) {
+                        return (
+                            <TextInput
+                                control={control}
+                                name={fieldName}
+                                label={label}
+                                placeholder={placeholder}
+                                showError={false}
+                            />
+                        );
+                    }
+
+                    // Handle ZodBoolean fields
+                    else if (schema instanceof z.ZodBoolean) {
+                        return (
+                            <Switch
+                                control={control}
+                                name={fieldName}
+                                label={label}
+                                description={description}
+                                showError={false}
+                            />
+                        );
+                    }
+
+                    // Handle ZodEnum fields
+                    else if (schema instanceof z.ZodEnum) {
+                        const options = schema.options.map((option: string | number) => {
+                            const optionKey = `${name}.${option}`;
+                            const translatedLabel = t({
+                                id: optionKey,
+                                defaultMessage: String(option).charAt(0).toUpperCase() + String(option).slice(1)
+                            });
+                            return {
+                                label: translatedLabel,
+                                value: option,
+                            };
+                        });
+
+                        // Use Radio for 3 or fewer options, Select for more
+                        if (options.length <= 3) {
+                            return (
+                                <Radio
+                                    control={control}
+                                    name={fieldName}
+                                    label={label}
+                                    options={options}
+                                    direction="column"
+                                    showError={false}
+                                />
+                            );
+                        } else {
+                            return (
+                                <Select
+                                    control={control}
+                                    name={fieldName}
+                                    label={label}
+                                    options={options}
+                                    showError={false}
+                                />
+                            );
+                        }
+                    }
+
+                    // Handle ZodOptional fields (wrapped types)
+                    else if (schema instanceof z.ZodOptional) {
+                        const innerSchema = schema._def.innerType;
+
+                        if (innerSchema instanceof z.ZodString) {
+                            const isPassword = name.toLowerCase().includes('password');
+
                             return (
                                 <TextInput
                                     control={control}
                                     name={fieldName}
-                                    label={config.label}
-                                    placeholder={config.placeholder}
-                                    secureTextEntry={config.isPassword}
+                                    label={label}
+                                    placeholder={placeholder}
+                                    secureTextEntry={isPassword}
                                     showError={false}
                                 />
                             );
-
-                        case 'number':
+                        } else if (innerSchema instanceof z.ZodNumber) {
                             return (
                                 <TextInput
                                     control={control}
                                     name={fieldName}
-                                    label={config.label}
-                                    placeholder={config.placeholder}
+                                    label={label}
+                                    placeholder={placeholder}
                                     showError={false}
                                 />
                             );
-
-                        case 'boolean':
+                        } else if (innerSchema instanceof z.ZodBoolean) {
                             return (
                                 <Switch
                                     control={control}
                                     name={fieldName}
-                                    label={config.label}
-                                    description={config.description}
+                                    label={label}
+                                    description={description}
                                     showError={false}
                                 />
                             );
+                        } else if (innerSchema instanceof z.ZodEnum) {
+                            const options = innerSchema.options.map((option: string | number) => {
+                                const optionKey = `${name}.${option}`;
+                                const translatedLabel = t({
+                                    id: optionKey,
+                                    defaultMessage: String(option).charAt(0).toUpperCase() + String(option).slice(1)
+                                });
+                                return {
+                                    label: translatedLabel,
+                                    value: option,
+                                };
+                            });
 
-                        case 'enum':
-                            if (!config.options) return null;
-
-                            // Utiliser Radio si moins de 4 options, sinon Select
-                            if (config.options.length <= 3) {
+                            if (options.length <= 3) {
                                 return (
                                     <Radio
                                         control={control}
                                         name={fieldName}
-                                        label={config.label}
-                                        options={config.options}
+                                        label={label}
+                                        options={options}
                                         direction="column"
                                         showError={false}
                                     />
@@ -286,20 +343,19 @@ export function ZodForm<T extends z.ZodType<any, any, any> = z.ZodType<any, any,
                                     <Select
                                         control={control}
                                         name={fieldName}
-                                        label={config.label}
-                                        placeholder={t({ id: 'form.select.placeholder' }, { fieldName: config.label?.toLowerCase() })}
-                                        options={config.options}
+                                        label={label}
+                                        options={options}
                                         showError={false}
                                     />
                                 );
                             }
-
-                        default:
-                            return null;
+                        }
                     }
+
+                    return null; // Unknown field type
                 })()}
 
-                {/* Réservation d'espace pour les erreurs */}
+                {/* Error message display */}
                 <View style={styles.errorContainer}>
                     {showFieldErrors && error && (
                         <Text style={styles.errorText}>
@@ -311,10 +367,16 @@ export function ZodForm<T extends z.ZodType<any, any, any> = z.ZodType<any, any,
         );
     };
 
+    // ============================================================================
+    // COMPONENT RENDER
+    // ============================================================================
+
     return (
         <View style={styles.container}>
-            {fieldConfigs.map(renderField)}
+            {/* Render all form fields */}
+            {fieldSchemas.map(renderField)}
 
+            {/* Submit button with validation state */}
             {showSubmitButton && (
                 <TouchableOpacity
                     style={[
@@ -331,15 +393,19 @@ export function ZodForm<T extends z.ZodType<any, any, any> = z.ZodType<any, any,
     );
 }
 
+// ============================================================================
+// STYLES
+// ============================================================================
+
 const styles = StyleSheet.create({
     container: {
         flex: 1,
     },
     fieldContainer: {
-        marginBottom: 16,
+        marginBottom: 16, // Space between fields
     },
     errorContainer: {
-        minHeight: 20, // Réserve de l'espace pour les erreurs
+        minHeight: 20, // Reserve space for error messages to prevent layout shift
         justifyContent: 'flex-start',
     },
     submitButton: {
